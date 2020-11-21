@@ -11,9 +11,9 @@ const rl = readline.createInterface({
 client.connect(PORT, '127.0.0.1',() => {
     console.log('connected');
         rl.on('line', (input) =>{
-            console.log(input);
-            client.write('USER JoSmith');
-            // client.write('USER '+input);
+            // console.log(input);
+            // client.write('USER JoSmith');
+            client.write(input);
         });
 })
 
