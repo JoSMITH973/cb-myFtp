@@ -18,11 +18,6 @@ client.connect(PORT, host,() => {
             // client.write('USER JoSmith');
             client.write(input);
 
-            if(input.slice(0,4) == 'USER'){
-                username = input.slice(4);
-                console.log(username);
-            }
-
             if (input == "QUIT") {
                 console.log("Good Bye !")
                 process.exit();

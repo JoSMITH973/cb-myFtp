@@ -1,4 +1,6 @@
 const fs = require('fs');
+const EventEmiter = require('events');
+const myEmitter = new EventEmiter();
 const net = require('net');
 const process = require('process');
 const path = require('path');
@@ -9,16 +11,11 @@ const serveur = net.createServer((socket) => {
     console.log('new Connection');
     
     socket.on('data',(data) =>{
-        const [directive,parameter,optionnal] = data.toString().split(' ');
-        // socket.write('Hello from Server');
+        const [directive,parameter] = data.toString().split(' ');
         const ufile = fs.readFileSync('./users.json');
         let login = JSON.parse(ufile);
         let userOk = Boolean;
         userOk = 0;
-        // Début Déboggage | Pour éviter de s'authentifier
-            // socket.username = "Joan";
-            // socket.passOk=1;
-        // Fin déboggage
         switch(directive) {
             case 'HELP':
                 socket.write('USER <username> : To check if the user exist\n\r')
@@ -45,14 +42,14 @@ const serveur = net.createServer((socket) => {
                 
                 // if userOk is true
                 if(userOk) {
-                    socket.write('user '+parameter+' exist\r');
-                    socket.write('now you have to enter your password with the command PASS');
+                    socket.write('User '+parameter+' exist\r');
+                    socket.write('Now you have to enter your password with the command PASS\n');
                     socket.username = parameter;
                     socket.saveid = save;
                     socket.userOk = userOk;
                 }
                 else {
-                    socket.write(parameter+" doesn't exist");
+                    socket.write(parameter+" doesn't exist\n");
                 }
             break;
 
@@ -61,118 +58,111 @@ const serveur = net.createServer((socket) => {
                     if(login[socket.saveid]["password"] == parameter) {
                         socket.passOk = 1;
                         console.log(socket.username+' is connected');
-                        socket.write('Welcome '+socket.username);
+                        socket.write('Welcome '+socket.username+'\n');
                         socket.directory = "Server/"+socket.username;
-                        // socket.directory = fs.readdirSync("Server/"+socket.username);
-                        // socket.directory = process.cwd();
-                        // console.log('Pass directory : '+socket.directory)
+                        socket.directoryUser = "Client/"+socket.username;
                     }
                     else {
-                        socket.write('wrong password');
+                        socket.write('wrong password\n');
                     }
                 }
                 else {
                     socket.write("Erreur : Veuillez entrez votre nom d'utilisateur avant")
-                    socket.write("utilisez la commande -> USER <username>")
+                    socket.write("utilisez la commande -> USER <username>\n")
                 } 
             break;
 
             case 'LIST':
                 if(socket.passOk==1){
                     directory = fs.readdirSync(socket.directory);
-                    socket.write('Files in the current directory :\n\r');
+                    socket.write('Files in the current directory :');
                     directory.forEach(file => {
                         socket.write(file+'\n');
                     });
                 }
                 else {
-                    socket.write("You have to authenticate first");
+                    socket.write("You have to authenticate first\n");
                 }
             break;
 
             case 'CWD':
                 if(socket.passOk==1){
-                    console.log('socket.directory : ',socket.directory)
-                    console.log('parameter : ',parameter)
                     if (parameter == '' || parameter == null){
-                        socket.write('Error, please use the command HELP to know how to proceed');
+                        socket.write('Error, please use the command HELP to know how to proceed\n');
                     }
                     if (parameter.slice(0,6) == '../../') {
-                        socket.write('You have to go back one folder at the time')
+                        socket.write('You have to go back one folder at the time\n');
                     }
                     if (socket.directory == ("Server/"+socket.username) && parameter.slice(0,3) == '../') {
-                        socket.write('You don\'t have the permissions to reach this folder')
+                        socket.write('You don\'t have the permissions to reach this folder\n');
                     }
                     else {
-                        let changeFOk=0;
                         if (parameter.slice(0,3) == '../'){
                             textToDel = socket.directory.lastIndexOf('/')
                             socket.directory = socket.directory.slice(0,textToDel) // +parameter.slice(3) // Interdit de monter de niveau et descendre en même temps
-                            changeFOk=1;
+                            socket.write('You have successfully change of directory\n\r');
                         }
                         else if (parameter.slice(0,1) == '/'){
                             fs.access(socket.directory+parameter, function(err) {
                                 if (err) {
-                                    socket.write('this folder doesn\'t exist')
+                                    socket.write('this folder doesn\'t exist\n')
                                 }
                                 else {
                                     socket.directory += parameter;
-                                    changeFOk=1;
+                                    socket.write('You have successfully change of directory\n\r');
                                 }
                             })
                         }
                         else {
                             fs.access(socket.directory+'/'+parameter, function(err) {
                                 if (err) {
-                                    socket.write('this folder doesn\'t exist')
+                                    socket.write('this folder doesn\'t exist\n')
                                 }
                                 else {
                                     socket.directory += '/'+parameter;
-                                    changeFOk=1;
+                                    socket.write('You have successfully change of directory\n\r');
                                 }
                             })
-                        }
-                        if (changeFOk==1) {
-                            socket.write('You have successfully change of directory\n\r');
-                            socket.write(socket.directory);
                         }
                     }
                 }
                 else {
-                    socket.write("You have to authenticate first");
+                    socket.write("You have to authenticate first\n");
                 }
             break;
             
             case 'RETR':
                 if(socket.passOk==1){
-                    nameDir = path.basename(socket.directory)
-                    socket.write('The name of the current directory is :');
-                    socket.write(nameDir);
+                    const readSteam = fs.createReadStream(socket.directory+'/'+parameter);
+                    const writeSteam = fs.createWriteStream(socket.directoryUser+'/'+parameter);
+                    readSteam.pipe(writeSteam);
+                    socket.write("The file "+parameter+" has been transfered to the client side !\n")
                 }
                 else {
-                    socket.write("You have to authenticate first");
+                    socket.write("You have to authenticate first\n");
                 }
             break;
 
-            case 'SOTR':
+            case 'STOR':
                 if(socket.passOk==1){
-                    nameDir = path.basename(socket.directory)
-                    socket.write('The name of the current directory is :');
-                    socket.write(nameDir);
+                    const readSteam = fs.createReadStream(socket.directoryUser+'/'+parameter);
+                    const writeSteam = fs.createWriteStream(socket.directory+'/'+parameter);
+                    readSteam.pipe(writeSteam);
+                    socket.write("The file "+parameter+" has been transfered to the server !\n")
                 }
                 else {
-                    socket.write("You have to authenticate first");
+                    socket.write("You have to authenticate first\n");
                 }
             break;
             
             case 'PWD':
                 if(socket.passOk==1){
                     nameDir = path.basename(socket.directory)
-                    socket.write('The name of the current directory is :');
-                    socket.write(nameDir);
+                    socket.write('The name of the current directory is : \n');
+                    socket.write(nameDir+'\n');
                 }
                 else {
-                    socket.write("You have to authenticate first");
+                    socket.write("You have to authenticate first\n");
                 }
             break;
 
@@ -185,7 +175,6 @@ const serveur = net.createServer((socket) => {
         }
     });
 });
-
 
 serveur.listen(PORT, () => {
     console.log("Server started at http://localhost:",PORT);
