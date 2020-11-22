@@ -14,6 +14,10 @@ client.connect(PORT, '127.0.0.1',() => {
             // console.log(input);
             // client.write('USER JoSmith');
             client.write(input);
+            if (input == "QUIT") {
+                console.log("Good Bye !")
+                process.exit();
+            }
         });
 })
 
