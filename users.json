@@ -1,7 +1,7 @@
 [
     {
         "username":"Joan",
-        "password":"test"
+        "password":"smith"
     },
     {
         "username":"Me",
@@ -9,6 +9,6 @@
     },
     {
         "username":"Paris",
-        "password":"Marseille12defaitesdesuite"
+        "password":"champions"
     }
 ]
