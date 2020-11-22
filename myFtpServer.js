@@ -2,7 +2,6 @@ const fs = require('fs');
 const net = require('net');
 const process = require('process');
 const path = require('path');
-const { match } = require('assert');
 
 const PORT = process.argv[2] || 4242;
 
@@ -138,6 +137,28 @@ const serveur = net.createServer((socket) => {
                             socket.write(socket.directory);
                         }
                     }
+                }
+                else {
+                    socket.write("You have to authenticate first");
+                }
+            break;
+            
+            case 'RETR':
+                if(socket.passOk==1){
+                    nameDir = path.basename(socket.directory)
+                    socket.write('The name of the current directory is :');
+                    socket.write(nameDir);
+                }
+                else {
+                    socket.write("You have to authenticate first");
+                }
+            break;
+
+            case 'SOTR':
+                if(socket.passOk==1){
+                    nameDir = path.basename(socket.directory)
+                    socket.write('The name of the current directory is :');
+                    socket.write(nameDir);
                 }
                 else {
                     socket.write("You have to authenticate first");
